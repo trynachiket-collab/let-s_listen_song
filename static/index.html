@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SyncPlay</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --card:#f3f3f5; --acc:#6c47ff; --mut:#777; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141417; --fg:#eee; --card:#222228; --mut:#999; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 22px; margin: 8px 0 16px; }
+  input, button { font: inherit; padding: 10px 12px; border-radius: 8px; border: 1px solid #8884; background: var(--card); color: var(--fg); }
+  button { cursor: pointer; background: var(--acc); color: #fff; border: 0; }
+  button.ghost { background: var(--card); color: var(--fg); }
+  .row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .row input { flex: 1; min-width: 0; }
+  #player-box { position: relative; padding-top: 56.25%; background: #000; border-radius: 12px; overflow: hidden; }
+  #player-box > div, #player-box iframe { position: absolute; inset: 0; width: 100%; height: 100%; }
+  ul { list-style: none; padding: 0; margin: 12px 0; }
+  li { display: flex; align-items: center; gap: 8px; padding: 10px; background: var(--card); border-radius: 8px; margin-bottom: 6px; }
+  li.cur { outline: 2px solid var(--acc); }
+  li span.t { flex: 1; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  li button { padding: 4px 10px; background: transparent; color: var(--mut); }
+  .bar { display: flex; gap: 8px; justify-content: center; margin: 12px 0; }
+  .muted { color: var(--mut); font-size: 14px; }
+  #app { display: none; }
+  h2 { font-size: 16px; margin: 20px 0 8px; }
+  #chat { height: 220px; overflow-y: auto; background: var(--card); border-radius: 12px; padding: 10px; margin-bottom: 8px; }
+  .msg { padding: 4px 0; transition: opacity 1s; word-wrap: break-word; }
+  .msg b { color: var(--acc); }
+  .msg.me b { color: var(--mut); }
+  .msg.fading { opacity: 0.35; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎧 SyncPlay</h1>
+
+  <div id="lobby">
+    <div class="row"><input id="name" placeholder="Your name" maxlength="20"></div>
+    <div class="row"><button onclick="createRoom()">Create new room</button></div>
+    <p class="muted">Or enter the code your friend sent you:</p>
+    <div class="row">
+      <input id="room" placeholder="Room code" autocapitalize="off">
+      <button onclick="joinRoom()">Join</button>
+    </div>
+  </div>
+
+  <div id="app">
+    <p class="muted">Room: <b id="rname"></b> · share this code with your friend</p>
+    <div id="player-box"><div id="yt"></div></div>
+    <div class="bar">
+      <button class="ghost" onclick="act('prev')">⏮ Prev</button>
+      <button onclick="togglePlay()">⏯ Play / Pause</button>
+      <button class="ghost" onclick="act('next')">Next ⏭</button>
+    </div>
+    <div class="row">
+      <input id="link" type="search" placeholder="Search a song or paste a link"
+             oninput="onSearchInput()" onkeydown="onSearchKey(event)">
+      <button onclick="go()">Search</button>
+    </div>
+    <ul id="results"></ul>
+    <ul id="list"></ul>
+
+    <h2>💬 Chat</h2>
+    <p class="muted">Messages disappear after 5 minutes.</p>
+    <div id="chat"><p class="muted" id="chat-empty">No messages yet.</p></div>
+    <div class="row">
+      <input id="msg" placeholder="Say something..." maxlength="300"
+             onkeydown="if(event.key==='Enter')sendChat()">
+      <button onclick="sendChat()">Send</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+let socket, room, player, ytReady = false, state = null, curId = null;
+let applying = false, applyTimer = null;
+let searchSeq = 0;
+let myName = '', unread = 0;
+
+// Remember the name between visits
+const nameBox = document.getElementById('name');
+try { nameBox.value = localStorage.getItem('syncplay-name') || ''; } catch (e) {}  // ignores search responses that arrive after the box was cleared
+
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player('yt', {
+    width: '100%', height: '100%',
+    playerVars: { playsinline: 1, rel: 0 },
+    events: { onReady: () => { ytReady = true; if (state) apply(state); }, onStateChange: onPlayerState }
+  });
+}
+
+async function createRoom() {
+  const r = await fetch('/create');
+  document.getElementById('room').value = (await r.json()).room;
+  joinRoom();
+}
+
+function joinRoom() {
+  room = document.getElementById('room').value.trim().toLowerCase();
+  if (!room) return;
+  myName = nameBox.value.trim() || 'Guest-' + Math.floor(Math.random() * 1000);
+  try { localStorage.setItem('syncplay-name', myName); } catch (e) {}
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('rname').textContent = room;
+  socket = io();
+  socket.on('connect', () => socket.emit('join', { room }));
+  socket.on('err', m => { alert(m); location.reload(); });
+  socket.on('state', s => { state = s; renderList(); if (ytReady) apply(s); });
+  socket.on('chat_history', msgs => {
+    document.querySelectorAll('#chat .msg').forEach(el => el.remove());
+    msgs.forEach(showMsg);
+  });
+  socket.on('chat', m => {
+    showMsg(m);
+    if (document.hidden && m.name !== myName) {
+      unread++;
+      document.title = `(${unread}) SyncPlay`;
+    }
+  });
+}
+
+// ---------- Chat ----------
+
+function sendChat() {
+  const box = document.getElementById('msg');
+  const text = box.value.trim();
+  if (!text) return;
+  socket.emit('chat', { name: myName, text });
+  box.value = '';
+}
+
+// Shows a message and schedules its removal. 'left' = seconds until it expires.
+function showMsg(m) {
+  if (m.left <= 0 || document.getElementById('m-' + m.id)) return;
+  const box = document.getElementById('chat');
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
+
+  const div = document.createElement('div');
+  div.className = 'msg' + (m.name === myName ? ' me' : '');
+  div.id = 'm-' + m.id;
+  const who = document.createElement('b');
+  who.textContent = m.name + ': ';
+  div.append(who, document.createTextNode(m.text));  // textContent-safe, no HTML injection
+  box.appendChild(div);
+  updateEmpty();
+  if (atBottom) box.scrollTop = box.scrollHeight;
+
+  const ms = m.left * 1000;
+  setTimeout(() => div.classList.add('fading'), Math.max(0, ms - 15000));  // fade in last 15s
+  setTimeout(() => { div.remove(); updateEmpty(); }, ms);
+}
+
+function updateEmpty() {
+  document.getElementById('chat-empty').style.display =
+    document.querySelector('#chat .msg') ? 'none' : 'block';
+}
+
+function act(type, extra = {}) { socket.emit('action', { room, type, ...extra }); }
+
+function extractId(s) {
+  const m = s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/) || s.match(/^([\w-]{11})$/);
+  return m ? m[1] : null;
+}
+
+// ---------- Search ----------
+
+function clearResults() {
+  searchSeq++;  // cancels any search still in flight
+  document.getElementById('results').innerHTML = '';
+}
+
+function onSearchInput() {
+  if (!document.getElementById('link').value.trim()) clearResults();
+}
+
+function onSearchKey(e) {
+  if (e.key === 'Enter') go();
+  if (e.key === 'Escape') { e.target.value = ''; clearResults(); }
+}
+
+async function addSong() {
+  const box = document.getElementById('link');
+  const id = extractId(box.value.trim());
+  if (!id) { alert('Could not find a YouTube video ID in that link.'); return; }
+  let title = id;
+  try {
+    const r = await fetch('https://noembed.com/embed?url=https://www.youtube.com/watch?v=' + id);
+    title = (await r.json()).title || id;
+  } catch (e) {}
+  act('add', { id, title });
+  box.value = '';
+  clearResults();
+}
+
+async function go() {
+  const v = document.getElementById('link').value.trim();
+  if (!v) { clearResults(); return; }
+  if (extractId(v)) return addSong();
+  const seq = ++searchSeq;
+  const ul = document.getElementById('results');
+  ul.innerHTML = '<p class="muted">Searching...</p>';
+  let res = [];
+  try {
+    const r = await fetch('/search?q=' + encodeURIComponent(v));
+    res = (await r.json()).results;
+  } catch (e) {}
+  if (seq !== searchSeq) return;  // box was cleared or a newer search started
+  ul.innerHTML = res.length ? '' : '<p class="muted">No results.</p>';
+  res.forEach(x => {
+    const li = document.createElement('li');
+    const t = document.createElement('span');
+    t.className = 't';
+    t.textContent = x.title + (x.channel ? ' · ' + x.channel : '');
+    const b = document.createElement('button');
+    b.textContent = '+ Add';
+    b.onclick = () => { act('add', { id: x.id, title: x.title }); li.remove(); };
+    li.append(t, b);
+    ul.appendChild(li);
+  });
+}
+
+// ---------- Playback ----------
+
+function togglePlay() {
+  if (!ytReady || !state || state.index < 0) return;
+  const t = player.getCurrentTime();
+  act(state.playing ? 'pause' : 'play', { time: t });
+}
+
+// Apply the room state to the local player without echoing events back.
+function apply(s) {
+  applying = true;
+  clearTimeout(applyTimer);
+  applyTimer = setTimeout(() => applying = false, 1500);
+
+  const cur = s.playlist[s.index];
+  if (!cur) { curId = null; player.stopVideo(); return; }
+
+  if (curId !== cur.id) {
+    curId = cur.id;
+    player.loadVideoById({ videoId: cur.id, startSeconds: s.time });
+    if (!s.playing) setTimeout(() => player.pauseVideo(), 800);
+    return;
+  }
+  if (Math.abs(player.getCurrentTime() - s.time) > 2) player.seekTo(s.time, true);
+  const ps = player.getPlayerState();
+  if (s.playing && ps !== YT.PlayerState.PLAYING) player.playVideo();
+  if (!s.playing && ps === YT.PlayerState.PLAYING) player.pauseVideo();
+}
+
+// Real user actions inside the YouTube player get shared with the room.
+function onPlayerState(e) {
+  if (applying || !state || state.index < 0) return;
+  const t = player.getCurrentTime();
+  if (e.data === YT.PlayerState.PLAYING) {
+    if (!state.playing || Math.abs(t - state.time) > 2) act('play', { time: t });
+  } else if (e.data === YT.PlayerState.PAUSED) {
+    // A pause while the page is hidden comes from the browser, not from you.
+    // Don't pause your friend; try to keep playing instead.
+    if (document.hidden) {
+      if (state.playing) player.playVideo();
+      return;
+    }
+    if (state.playing) act('pause', { time: t });
+  } else if (e.data === YT.PlayerState.ENDED) {
+    act('ended', { i: state.index });
+  }
+}
+
+// When you come back to the tab, jump to where the room is now.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  unread = 0;
+  document.title = 'SyncPlay';
+  if (ytReady && state) apply(state);
+});
+
+function renderList() {
+  const ul = document.getElementById('list');
+  ul.innerHTML = '';
+  state.playlist.forEach((s, i) => {
+    const li = document.createElement('li');
+    if (i === state.index) li.className = 'cur';
+    const t = document.createElement('span');
+    t.className = 't';
+    t.textContent = (i === state.index ? '▶ ' : '') + s.title;
+    t.onclick = () => act('play_index', { i });
+    const x = document.createElement('button');
+    x.textContent = '✕';
+    x.onclick = () => act('remove', { i });
+    li.append(t, x);
+    ul.appendChild(li);
+  });
+  if (!state.playlist.length) ul.innerHTML = '<p class="muted">Playlist is empty. Paste a link above.</p>';
+}
+</script>
+</body>
+</html>
