@@ -1,0 +1,4 @@
+fastapi
+uvicorn[standard]
+python-socketio>=5.8
+yt-dlp
