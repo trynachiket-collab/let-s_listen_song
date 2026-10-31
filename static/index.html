@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141417">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <title>SyncPlay</title>
 <style>
   :root { --bg:#fff; --fg:#1a1a1a; --card:#f3f3f5; --acc:#6c47ff; --mut:#777; }
@@ -32,6 +39,31 @@
   .msg b { color: var(--acc); }
   .msg.me b { color: var(--mut); }
   .msg.fading { opacity: 0.35; }
+
+  /* SyncPlay PWA + listening mode */
+  body { padding-bottom: env(safe-area-inset-bottom); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+  .top-actions { display:flex; gap:8px; flex-wrap:wrap; margin: 0 0 12px; }
+  .top-actions button { flex:1; min-width:130px; }
+  #install-btn { display:none; }
+  #listen-toggle[aria-pressed="true"] { background:#39258f; }
+  #player-box { min-height:180px; }
+  #chat-section { margin-top: 20px; }
+  #chat-section h2 { margin-top: 0; }
+  .listen-hint { display:none; }
+  #app.listen-mode .listen-hint { display:block; }
+  #app.listen-mode #chat-section,
+  #app.listen-mode #search-row,
+  #app.listen-mode #results { display:none; }
+  #app.listen-mode #player-box { border:1px solid #6c47ff66; }
+  @media (max-width:520px) {
+    .wrap { padding: max(12px, env(safe-area-inset-top)) 12px 20px; }
+    h1 { margin-top: 6px; }
+    .bar { gap:6px; }
+    .bar button { padding:10px 8px; flex:1; }
+    #player-box { min-height:170px; }
+    #chat { height:180px; }
+  }
 </style>
 </head>
 <body>
@@ -50,13 +82,18 @@
 
   <div id="app">
     <p class="muted">Room: <b id="rname"></b> · share this code with your friend</p>
+    <div class="top-actions">
+      <button id="listen-toggle" class="ghost" aria-pressed="false" onclick="toggleListenMode()">🎧 Listen mode</button>
+      <button id="install-btn" class="ghost" onclick="installApp()">＋ Install app</button>
+    </div>
+    <p class="muted listen-hint">Listen mode is on. Chat and search are tucked away; your shared queue stays available.</p>
     <div id="player-box"><div id="yt"></div></div>
     <div class="bar">
       <button class="ghost" onclick="act('prev')">⏮ Prev</button>
       <button onclick="togglePlay()">⏯ Play / Pause</button>
       <button class="ghost" onclick="act('next')">Next ⏭</button>
     </div>
-    <div class="row">
+    <div class="row" id="search-row">
       <input id="link" type="search" placeholder="Search a song or paste a link"
              oninput="onSearchInput()" onkeydown="onSearchKey(event)">
       <button onclick="go()">Search</button>
@@ -64,6 +101,7 @@
     <ul id="results"></ul>
     <ul id="list"></ul>
 
+    <section id="chat-section">
     <h2>💬 Chat</h2>
     <p class="muted">Messages disappear after 5 minutes.</p>
     <div id="chat"><p class="muted" id="chat-empty">No messages yet.</p></div>
@@ -72,6 +110,7 @@
              onkeydown="if(event.key==='Enter')sendChat()">
       <button onclick="sendChat()">Send</button>
     </div>
+    </section>
   </div>
 </div>
 
@@ -82,6 +121,8 @@ let socket, room, player, ytReady = false, state = null, curId = null;
 let applying = false, applyTimer = null;
 let searchSeq = 0;
 let myName = '', unread = 0;
+let deferredInstallPrompt = null;
+let listenMode = false;
 
 // Remember the name between visits
 const nameBox = document.getElementById('name');
@@ -112,7 +153,7 @@ function joinRoom() {
   socket = io();
   socket.on('connect', () => socket.emit('join', { room }));
   socket.on('err', m => { alert(m); location.reload(); });
-  socket.on('state', s => { state = s; renderList(); if (ytReady) apply(s); });
+  socket.on('state', s => { state = s; renderList(); updateMediaSession(); if (ytReady) apply(s); });
   socket.on('chat_history', msgs => {
     document.querySelectorAll('#chat .msg').forEach(el => el.remove());
     msgs.forEach(showMsg);
@@ -228,6 +269,14 @@ async function go() {
 
 // ---------- Playback ----------
 
+function toggleListenMode() {
+  listenMode = !listenMode;
+  document.getElementById('app').classList.toggle('listen-mode', listenMode);
+  const btn = document.getElementById('listen-toggle');
+  btn.setAttribute('aria-pressed', String(listenMode));
+  btn.textContent = listenMode ? '🎧 Listen mode: ON' : '🎧 Listen mode';
+}
+
 function togglePlay() {
   if (!ytReady || !state || state.index < 0) return;
   const t = player.getCurrentTime();
@@ -256,18 +305,72 @@ function apply(s) {
 }
 
 // Real user actions inside the YouTube player get shared with the room.
+function updateMediaSession() {
+  if (!('mediaSession' in navigator) || !state) return;
+  const current = state.playlist && state.playlist[state.index];
+  if (!current) {
+    navigator.mediaSession.metadata = null;
+    navigator.mediaSession.playbackState = 'none';
+    return;
+  }
+
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: current.title || current.id,
+      artist: 'SyncPlay listening room',
+      album: 'Shared playlist',
+      artwork: [
+        { src: `https://i.ytimg.com/vi/${encodeURIComponent(current.id)}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }
+      ]
+    });
+  } catch (e) {}
+
+  try {
+    navigator.mediaSession.setActionHandler('play', () => {
+      if (!ytReady || !state) return;
+      player.playVideo();
+      act('play', { time: player.getCurrentTime() || 0 });
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      if (!ytReady || !state) return;
+      player.pauseVideo();
+      act('pause', { time: player.getCurrentTime() || 0 });
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => act('prev'));
+    navigator.mediaSession.setActionHandler('nexttrack', () => act('next'));
+    navigator.mediaSession.setActionHandler('seekto', details => {
+      if (ytReady && Number.isFinite(details.seekTime)) {
+        player.seekTo(details.seekTime, true);
+        act('seek', { time: details.seekTime });
+      }
+    });
+  } catch (e) {}
+
+  try {
+    navigator.mediaSession.playbackState = state.playing ? 'playing' : 'paused';
+    if (ytReady && player && typeof player.getDuration === 'function') {
+      const duration = player.getDuration();
+      const position = player.getCurrentTime();
+      if (duration > 0 && Number.isFinite(position)) {
+        navigator.mediaSession.setPositionState({
+          duration,
+          playbackRate: 1,
+          position: Math.min(position, duration)
+        });
+      }
+    }
+  } catch (e) {}
+}
+
 function onPlayerState(e) {
   if (applying || !state || state.index < 0) return;
   const t = player.getCurrentTime();
   if (e.data === YT.PlayerState.PLAYING) {
     if (!state.playing || Math.abs(t - state.time) > 2) act('play', { time: t });
   } else if (e.data === YT.PlayerState.PAUSED) {
-    // A pause while the page is hidden comes from the browser, not from you.
-    // Don't pause your friend; try to keep playing instead.
-    if (document.hidden) {
-      if (state.playing) player.playVideo();
-      return;
-    }
+    // Browsers may suspend embedded playback when backgrounded.
+    // Do not broadcast that browser lifecycle pause to the whole room.
+    if (document.hidden) return;
     if (state.playing) act('pause', { time: t });
   } else if (e.data === YT.PlayerState.ENDED) {
     act('ended', { i: state.index });
@@ -279,7 +382,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;
   unread = 0;
   document.title = 'SyncPlay';
-  if (ytReady && state) apply(state);
+  if (ytReady && state) { apply(state); updateMediaSession(); }
 });
 
 function renderList() {
@@ -299,6 +402,41 @@ function renderList() {
     ul.appendChild(li);
   });
   if (!state.playlist.length) ul.innerHTML = '<p class="muted">Playlist is empty. Paste a link above.</p>';
+}
+// ---------- Installable PWA ----------
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  const btn = document.getElementById('install-btn');
+  if (btn) btn.style.display = 'block';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  const btn = document.getElementById('install-btn');
+  if (btn) btn.style.display = 'none';
+});
+
+async function installApp() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    document.getElementById('install-btn').style.display = 'none';
+    return;
+  }
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (isIOS) {
+    alert('To install SyncPlay: tap the Share button in Safari, then choose “Add to Home Screen”.');
+  } else {
+    alert('If your browser supports installation, open its menu and choose “Install app” or “Add to Home screen”.');
+  }
+}
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => console.warn('Service worker registration failed:', err));
+  });
 }
 </script>
 </body>
