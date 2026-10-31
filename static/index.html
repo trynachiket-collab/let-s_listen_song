@@ -14,54 +14,52 @@
 <style>
   :root { --bg:#fff; --fg:#1a1a1a; --card:#f3f3f5; --acc:#6c47ff; --mut:#777; }
   @media (prefers-color-scheme: dark) { :root { --bg:#141417; --fg:#eee; --card:#222228; --mut:#999; } }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--fg); }
-  .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
-  h1 { font-size: 22px; margin: 8px 0 16px; }
-  input, button { font: inherit; padding: 10px 12px; border-radius: 8px; border: 1px solid #8884; background: var(--card); color: var(--fg); }
-  button { cursor: pointer; background: var(--acc); color: #fff; border: 0; }
-  button.ghost { background: var(--card); color: var(--fg); }
-  .row { display: flex; gap: 8px; margin-bottom: 12px; }
-  .row input { flex: 1; min-width: 0; }
-  #player-box { position: relative; padding-top: 56.25%; background: #000; border-radius: 12px; overflow: hidden; }
-  #player-box > div, #player-box iframe { position: absolute; inset: 0; width: 100%; height: 100%; }
-  ul { list-style: none; padding: 0; margin: 12px 0; }
-  li { display: flex; align-items: center; gap: 8px; padding: 10px; background: var(--card); border-radius: 8px; margin-bottom: 6px; }
-  li.cur { outline: 2px solid var(--acc); }
-  li span.t { flex: 1; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  li button { padding: 4px 10px; background: transparent; color: var(--mut); }
-  .bar { display: flex; gap: 8px; justify-content: center; margin: 12px 0; }
-  .muted { color: var(--mut); font-size: 14px; }
-  #app { display: none; }
-  h2 { font-size: 16px; margin: 20px 0 8px; }
-  #chat { height: 220px; overflow-y: auto; background: var(--card); border-radius: 12px; padding: 10px; margin-bottom: 8px; }
-  .msg { padding: 4px 0; transition: opacity 1s; word-wrap: break-word; }
-  .msg b { color: var(--acc); }
-  .msg.me b { color: var(--mut); }
-  .msg.fading { opacity: 0.35; }
-
-  /* SyncPlay PWA + listening mode */
-  body { padding-bottom: env(safe-area-inset-bottom); }
-  button:focus-visible, input:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
-  .top-actions { display:flex; gap:8px; flex-wrap:wrap; margin: 0 0 12px; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding-bottom:env(safe-area-inset-bottom); font-family:system-ui,sans-serif; background:var(--bg); color:var(--fg); }
+  .wrap { max-width:720px; margin:0 auto; padding:16px; }
+  h1 { font-size:22px; margin:8px 0 16px; }
+  h2 { font-size:16px; margin:20px 0 8px; }
+  input,button { font:inherit; padding:10px 12px; border-radius:8px; border:1px solid #8884; background:var(--card); color:var(--fg); }
+  button { cursor:pointer; background:var(--acc); color:#fff; border:0; }
+  button.ghost { background:var(--card); color:var(--fg); }
+  button:focus-visible,input:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+  .row { display:flex; gap:8px; margin-bottom:12px; }
+  .row input { flex:1; min-width:0; }
+  .muted { color:var(--mut); font-size:14px; }
+  #app { display:none; }
+  .top-actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
   .top-actions button { flex:1; min-width:130px; }
   #install-btn { display:none; }
   #listen-toggle[aria-pressed="true"] { background:#39258f; }
-  #player-box { min-height:180px; }
-  #chat-section { margin-top: 20px; }
-  #chat-section h2 { margin-top: 0; }
+  #player-box { padding:18px; min-height:160px; border-radius:12px; background:var(--card); border:1px solid #8883; }
+  .now-playing { display:flex; align-items:center; gap:14px; min-width:0; }
+  .cover { width:64px; height:64px; flex:0 0 64px; display:grid; place-items:center; border-radius:12px; background:linear-gradient(135deg,#6c47ff,#b16cff); color:white; font-size:30px; }
+  .track-copy { min-width:0; }
+  #track-title { display:block; overflow-wrap:anywhere; }
+  #track-artist { display:block; margin-top:4px; }
+  #play-status { display:block; margin-top:8px; color:var(--mut); font-size:13px; }
+  .progress { display:flex; align-items:center; gap:8px; margin-top:18px; font-size:12px; color:var(--mut); }
+  #seek { flex:1; min-width:0; padding:0; accent-color:var(--acc); }
+  .bar { display:flex; gap:8px; justify-content:center; margin:12px 0; }
+  .bar button { flex:1; }
+  .hint { margin:8px 0 14px; }
+  ul { list-style:none; padding:0; margin:12px 0; }
+  li { display:flex; align-items:center; gap:8px; padding:10px; background:var(--card); border-radius:8px; margin-bottom:6px; }
+  li.cur { outline:2px solid var(--acc); }
+  li span.t { flex:1; min-width:0; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  li button { padding:4px 10px; background:transparent; color:var(--mut); }
+  #chat { height:220px; overflow-y:auto; background:var(--card); border-radius:12px; padding:10px; margin-bottom:8px; }
+  .msg { padding:4px 0; transition:opacity 1s; overflow-wrap:anywhere; }
+  .msg b { color:var(--acc); }
+  .msg.me b { color:var(--mut); }
+  .msg.fading { opacity:.35; }
   .listen-hint { display:none; }
   #app.listen-mode .listen-hint { display:block; }
-  #app.listen-mode #chat-section,
-  #app.listen-mode #search-row,
-  #app.listen-mode #results { display:none; }
-  #app.listen-mode #player-box { border:1px solid #6c47ff66; }
-  @media (max-width:520px) {
-    .wrap { padding: max(12px, env(safe-area-inset-top)) 12px 20px; }
-    h1 { margin-top: 6px; }
+  #app.listen-mode #chat-section, #app.listen-mode #search-row { display:none; }
+  @media(max-width:520px) {
+    .wrap { padding:max(12px,env(safe-area-inset-top)) 12px 20px; }
     .bar { gap:6px; }
-    .bar button { padding:10px 8px; flex:1; }
-    #player-box { min-height:170px; }
+    .bar button { padding:10px 8px; }
     #chat { height:180px; }
   }
 </style>
@@ -69,15 +67,11 @@
 <body>
 <div class="wrap">
   <h1>🎧 SyncPlay</h1>
-
   <div id="lobby">
-    <div class="row"><input id="name" placeholder="Your name" maxlength="20"></div>
+    <div class="row"><input id="name" placeholder="Your name" maxlength="20" autocomplete="nickname"></div>
     <div class="row"><button onclick="createRoom()">Create new room</button></div>
     <p class="muted">Or enter the code your friend sent you:</p>
-    <div class="row">
-      <input id="room" placeholder="Room code" autocapitalize="off">
-      <button onclick="joinRoom()">Join</button>
-    </div>
+    <div class="row"><input id="room" placeholder="Room code" autocapitalize="off"><button onclick="joinRoom()">Join</button></div>
   </div>
 
   <div id="app">
@@ -86,60 +80,61 @@
       <button id="listen-toggle" class="ghost" aria-pressed="false" onclick="toggleListenMode()">🎧 Listen mode</button>
       <button id="install-btn" class="ghost" onclick="installApp()">＋ Install app</button>
     </div>
-    <p class="muted listen-hint">Listen mode is on. Chat and search are tucked away; your shared queue stays available.</p>
-    <div id="player-box"><div id="yt"></div></div>
+    <p class="muted listen-hint">Listen mode is on. Chat and adding tracks are tucked away; your shared queue stays available.</p>
+
+    <div id="player-box">
+      <div class="now-playing">
+        <div class="cover">♫</div>
+        <div class="track-copy">
+          <strong id="track-title">Nothing playing yet</strong>
+          <span id="track-artist" class="muted">Add a direct audio link to begin</span>
+          <span id="play-status">Ready</span>
+        </div>
+      </div>
+      <div class="progress">
+        <span id="current-time">0:00</span>
+        <input id="seek" type="range" min="0" max="100" value="0" step="1" aria-label="Seek through track">
+        <span id="duration">0:00</span>
+      </div>
+      <audio id="audio" preload="metadata" playsinline></audio>
+    </div>
+
     <div class="bar">
       <button class="ghost" onclick="act('prev')">⏮ Prev</button>
-      <button onclick="togglePlay()">⏯ Play / Pause</button>
+      <button id="play-btn" onclick="togglePlay()">▶ Play</button>
       <button class="ghost" onclick="act('next')">Next ⏭</button>
     </div>
-    <div class="row" id="search-row">
-      <input id="link" type="search" placeholder="Search a song or paste a link"
-             oninput="onSearchInput()" onkeydown="onSearchKey(event)">
-      <button onclick="go()">Search</button>
+
+    <div id="search-row">
+      <div class="row"><input id="link" type="url" inputmode="url" placeholder="Paste a direct HTTPS audio URL" onkeydown="if(event.key==='Enter')addAudio()"></div>
+      <div class="row"><input id="track-name" placeholder="Track title (optional)"><button onclick="addAudio()">＋ Add audio</button></div>
+      <p class="muted hint">Use a direct MP3, M4A, AAC, WAV or OGG file/stream URL. YouTube, Spotify and normal webpage links are not direct audio streams.</p>
     </div>
-    <ul id="results"></ul>
     <ul id="list"></ul>
 
     <section id="chat-section">
-    <h2>💬 Chat</h2>
-    <p class="muted">Messages disappear after 5 minutes.</p>
-    <div id="chat"><p class="muted" id="chat-empty">No messages yet.</p></div>
-    <div class="row">
-      <input id="msg" placeholder="Say something..." maxlength="300"
-             onkeydown="if(event.key==='Enter')sendChat()">
-      <button onclick="sendChat()">Send</button>
-    </div>
+      <h2>💬 Chat</h2>
+      <p class="muted">Messages disappear after 5 minutes.</p>
+      <div id="chat"><p class="muted" id="chat-empty">No messages yet.</p></div>
+      <div class="row"><input id="msg" placeholder="Say something..." maxlength="300" onkeydown="if(event.key==='Enter')sendChat()"><button onclick="sendChat()">Send</button></div>
     </section>
   </div>
 </div>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<script src="https://www.youtube.com/iframe_api"></script>
 <script>
-let socket, room, player, ytReady = false, state = null, curId = null;
-let applying = false, applyTimer = null;
-let searchSeq = 0;
-let myName = '', unread = 0;
-let deferredInstallPrompt = null;
-let listenMode = false;
-
-// Remember the name between visits
+let socket, room, state = null, currentTrackId = null, loadToken = 0;
+let myName = '', unread = 0, deferredInstallPrompt = null, listenMode = false;
+let applyingRemoteState = false;
+const audio = document.getElementById('audio');
 const nameBox = document.getElementById('name');
-try { nameBox.value = localStorage.getItem('syncplay-name') || ''; } catch (e) {}  // ignores search responses that arrive after the box was cleared
+try { nameBox.value = localStorage.getItem('syncplay-name') || ''; } catch (e) {}
 
-function onYouTubeIframeAPIReady() {
-  player = new YT.Player('yt', {
-    width: '100%', height: '100%',
-    playerVars: { playsinline: 1, rel: 0 },
-    events: { onReady: () => { ytReady = true; if (state) apply(state); }, onStateChange: onPlayerState }
-  });
-}
-
-async function createRoom() {
-  const r = await fetch('/create');
-  document.getElementById('room').value = (await r.json()).room;
-  joinRoom();
+function createRoom() {
+  fetch('/create').then(r => r.json()).then(data => {
+    document.getElementById('room').value = data.room;
+    joinRoom();
+  }).catch(() => alert('Could not create a room. Please try again.'));
 }
 
 function joinRoom() {
@@ -152,271 +147,309 @@ function joinRoom() {
   document.getElementById('rname').textContent = room;
   socket = io();
   socket.on('connect', () => socket.emit('join', { room }));
-  socket.on('err', m => { alert(m); location.reload(); });
-  socket.on('state', s => { state = s; renderList(); updateMediaSession(); if (ytReady) apply(s); });
-  socket.on('chat_history', msgs => {
-    document.querySelectorAll('#chat .msg').forEach(el => el.remove());
-    msgs.forEach(showMsg);
+  socket.on('err', message => alert(message));
+  socket.on('state', nextState => {
+    state = nextState;
+    renderList();
+    updateMediaSession();
+    applyRoomState(nextState);
   });
-  socket.on('chat', m => {
-    showMsg(m);
-    if (document.hidden && m.name !== myName) {
+  socket.on('chat_history', messages => {
+    document.querySelectorAll('#chat .msg').forEach(el => el.remove());
+    messages.forEach(showMsg);
+  });
+  socket.on('chat', message => {
+    showMsg(message);
+    if (document.hidden && message.name !== myName) {
       unread++;
       document.title = `(${unread}) SyncPlay`;
     }
   });
 }
 
-// ---------- Chat ----------
-
-function sendChat() {
-  const box = document.getElementById('msg');
-  const text = box.value.trim();
-  if (!text) return;
-  socket.emit('chat', { name: myName, text });
-  box.value = '';
+function act(type, extra = {}) {
+  if (socket && socket.connected) socket.emit('action', { room, type, ...extra });
 }
 
-// Shows a message and schedules its removal. 'left' = seconds until it expires.
-function showMsg(m) {
-  if (m.left <= 0 || document.getElementById('m-' + m.id)) return;
-  const box = document.getElementById('chat');
-  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
-
-  const div = document.createElement('div');
-  div.className = 'msg' + (m.name === myName ? ' me' : '');
-  div.id = 'm-' + m.id;
-  const who = document.createElement('b');
-  who.textContent = m.name + ': ';
-  div.append(who, document.createTextNode(m.text));  // textContent-safe, no HTML injection
-  box.appendChild(div);
-  updateEmpty();
-  if (atBottom) box.scrollTop = box.scrollHeight;
-
-  const ms = m.left * 1000;
-  setTimeout(() => div.classList.add('fading'), Math.max(0, ms - 15000));  // fade in last 15s
-  setTimeout(() => { div.remove(); updateEmpty(); }, ms);
+async function addAudio() {
+  const urlBox = document.getElementById('link');
+  const titleBox = document.getElementById('track-name');
+  const rawUrl = urlBox.value.trim();
+  if (!rawUrl) { alert('Paste a direct HTTPS audio URL first.'); return; }
+  let parsed;
+  try { parsed = new URL(rawUrl); } catch (e) { alert('That does not look like a valid URL.'); return; }
+  if (parsed.protocol !== 'https:' || !parsed.hostname) {
+    alert('Please use a public HTTPS audio URL.');
+    return;
+  }
+  let fallbackTitle = parsed.pathname.split('/').filter(Boolean).pop() || 'Audio track';
+  try { fallbackTitle = decodeURIComponent(fallbackTitle); } catch (e) {}
+  fallbackTitle = fallbackTitle.replace(/\.[a-z0-9]{2,5}$/i, '').replace(/[-_]/g, ' ');
+  const title = titleBox.value.trim() || fallbackTitle;
+  act('add', { url: parsed.href, title, artist: '' });
+  urlBox.value = '';
+  titleBox.value = '';
 }
 
-function updateEmpty() {
-  document.getElementById('chat-empty').style.display =
-    document.querySelector('#chat .msg') ? 'none' : 'block';
+function formatTime(value) {
+  if (!Number.isFinite(value) || value < 0) return '0:00';
+  const seconds = Math.floor(value);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-function act(type, extra = {}) { socket.emit('action', { room, type, ...extra }); }
-
-function extractId(s) {
-  const m = s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/) || s.match(/^([\w-]{11})$/);
-  return m ? m[1] : null;
+function setStatus(message) {
+  document.getElementById('play-status').textContent = message;
 }
 
-// ---------- Search ----------
+function applyRoomState(nextState) {
+  if (!nextState) return;
+  const track = nextState.playlist && nextState.playlist[nextState.index];
+  if (!track) {
+    loadToken++;
+    currentTrackId = null;
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    document.getElementById('track-title').textContent = 'Nothing playing yet';
+    document.getElementById('track-artist').textContent = 'Add a direct audio link to begin';
+    setStatus('Ready');
+    updateMediaSession();
+    return;
+  }
 
-function clearResults() {
-  searchSeq++;  // cancels any search still in flight
-  document.getElementById('results').innerHTML = '';
+  document.getElementById('track-title').textContent = track.title || 'Untitled audio';
+  document.getElementById('track-artist').textContent = track.artist || 'Shared listening room';
+  const isNewTrack = currentTrackId !== track.id;
+  if (isNewTrack) {
+    currentTrackId = track.id;
+    const token = ++loadToken;
+    applyingRemoteState = true;
+    audio.pause();
+    audio.src = track.url;
+    audio.load();
+    setStatus('Loading audio…');
+    const ready = () => {
+      if (token !== loadToken || !state) return;
+      applyPositionAndPlayback(state, token);
+    };
+    audio.addEventListener('loadedmetadata', ready, { once: true });
+    audio.addEventListener('error', () => {
+      if (token === loadToken) setStatus('Could not load this audio URL. Check that it is a direct, public audio stream.');
+    }, { once: true });
+    return;
+  }
+  if (audio.readyState >= 1) applyPositionAndPlayback(nextState, loadToken);
 }
 
-function onSearchInput() {
-  if (!document.getElementById('link').value.trim()) clearResults();
+async function applyPositionAndPlayback(roomState, token) {
+  if (token !== loadToken || !roomState) return;
+  applyingRemoteState = true;
+  const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+  const target = duration ? Math.min(roomState.time || 0, Math.max(0, duration - 0.25)) : Math.max(0, roomState.time || 0);
+  if (Number.isFinite(target) && Math.abs((audio.currentTime || 0) - target) > 2) {
+    try { audio.currentTime = target; } catch (e) {}
+  }
+  if (roomState.playing) {
+    try {
+      await audio.play();
+      if (token === loadToken) setStatus('Playing · background audio enabled where supported');
+    } catch (error) {
+      if (token === loadToken) setStatus('Tap Play once to allow audio on this device.');
+    }
+  } else {
+    audio.pause();
+    setStatus('Paused');
+  }
+  updatePlayButton();
+  updateMediaSession();
+  setTimeout(() => { if (token === loadToken) applyingRemoteState = false; }, 250);
 }
 
-function onSearchKey(e) {
-  if (e.key === 'Enter') go();
-  if (e.key === 'Escape') { e.target.value = ''; clearResults(); }
-}
-
-async function addSong() {
-  const box = document.getElementById('link');
-  const id = extractId(box.value.trim());
-  if (!id) { alert('Could not find a YouTube video ID in that link.'); return; }
-  let title = id;
+async function togglePlay() {
+  if (!state || state.index < 0 || !state.playlist[state.index]) return;
+  if (!audio.paused) {
+    const position = audio.currentTime || 0;
+    audio.pause();
+    act('pause', { time: position });
+    return;
+  }
   try {
-    const r = await fetch('https://noembed.com/embed?url=https://www.youtube.com/watch?v=' + id);
-    title = (await r.json()).title || id;
-  } catch (e) {}
-  act('add', { id, title });
-  box.value = '';
-  clearResults();
+    // This call is made directly from the user's tap to satisfy mobile autoplay policy.
+    await audio.play();
+    act('play', { time: audio.currentTime || state.time || 0 });
+    setStatus('Playing');
+  } catch (error) {
+    setStatus('Audio could not start. Check the URL and tap Play again.');
+    alert('Playback was blocked or the audio URL is not playable. Use a direct HTTPS audio file/stream URL.');
+  }
 }
 
-async function go() {
-  const v = document.getElementById('link').value.trim();
-  if (!v) { clearResults(); return; }
-  if (extractId(v)) return addSong();
-  const seq = ++searchSeq;
-  const ul = document.getElementById('results');
-  ul.innerHTML = '<p class="muted">Searching...</p>';
-  let res = [];
-  try {
-    const r = await fetch('/search?q=' + encodeURIComponent(v));
-    res = (await r.json()).results;
-  } catch (e) {}
-  if (seq !== searchSeq) return;  // box was cleared or a newer search started
-  ul.innerHTML = res.length ? '' : '<p class="muted">No results.</p>';
-  res.forEach(x => {
-    const li = document.createElement('li');
-    const t = document.createElement('span');
-    t.className = 't';
-    t.textContent = x.title + (x.channel ? ' · ' + x.channel : '');
-    const b = document.createElement('button');
-    b.textContent = '+ Add';
-    b.onclick = () => { act('add', { id: x.id, title: x.title }); li.remove(); };
-    li.append(t, b);
-    ul.appendChild(li);
-  });
+function updatePlayButton() {
+  document.getElementById('play-btn').textContent = audio.paused ? '▶ Play' : '⏸ Pause';
 }
-
-// ---------- Playback ----------
 
 function toggleListenMode() {
   listenMode = !listenMode;
   document.getElementById('app').classList.toggle('listen-mode', listenMode);
-  const btn = document.getElementById('listen-toggle');
-  btn.setAttribute('aria-pressed', String(listenMode));
-  btn.textContent = listenMode ? '🎧 Listen mode: ON' : '🎧 Listen mode';
+  const button = document.getElementById('listen-toggle');
+  button.setAttribute('aria-pressed', String(listenMode));
+  button.textContent = listenMode ? '🎧 Listen mode: ON' : '🎧 Listen mode';
 }
 
-function togglePlay() {
-  if (!ytReady || !state || state.index < 0) return;
-  const t = player.getCurrentTime();
-  act(state.playing ? 'pause' : 'play', { time: t });
-}
-
-// Apply the room state to the local player without echoing events back.
-function apply(s) {
-  applying = true;
-  clearTimeout(applyTimer);
-  applyTimer = setTimeout(() => applying = false, 1500);
-
-  const cur = s.playlist[s.index];
-  if (!cur) { curId = null; player.stopVideo(); return; }
-
-  if (curId !== cur.id) {
-    curId = cur.id;
-    player.loadVideoById({ videoId: cur.id, startSeconds: s.time });
-    if (!s.playing) setTimeout(() => player.pauseVideo(), 800);
-    return;
-  }
-  if (Math.abs(player.getCurrentTime() - s.time) > 2) player.seekTo(s.time, true);
-  const ps = player.getPlayerState();
-  if (s.playing && ps !== YT.PlayerState.PLAYING) player.playVideo();
-  if (!s.playing && ps === YT.PlayerState.PLAYING) player.pauseVideo();
-}
-
-// Real user actions inside the YouTube player get shared with the room.
 function updateMediaSession() {
   if (!('mediaSession' in navigator) || !state) return;
-  const current = state.playlist && state.playlist[state.index];
-  if (!current) {
+  const track = state.playlist && state.playlist[state.index];
+  if (!track) {
     navigator.mediaSession.metadata = null;
     navigator.mediaSession.playbackState = 'none';
     return;
   }
-
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: current.title || current.id,
-      artist: 'SyncPlay listening room',
-      album: 'Shared playlist',
-      artwork: [
-        { src: `https://i.ytimg.com/vi/${encodeURIComponent(current.id)}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }
-      ]
+      title: track.title || 'SyncPlay',
+      artist: track.artist || 'SyncPlay listening room',
+      album: 'Shared playlist'
     });
   } catch (e) {}
-
-  try {
-    navigator.mediaSession.setActionHandler('play', () => {
-      if (!ytReady || !state) return;
-      player.playVideo();
-      act('play', { time: player.getCurrentTime() || 0 });
-    });
-    navigator.mediaSession.setActionHandler('pause', () => {
-      if (!ytReady || !state) return;
-      player.pauseVideo();
-      act('pause', { time: player.getCurrentTime() || 0 });
-    });
-    navigator.mediaSession.setActionHandler('previoustrack', () => act('prev'));
-    navigator.mediaSession.setActionHandler('nexttrack', () => act('next'));
-    navigator.mediaSession.setActionHandler('seekto', details => {
-      if (ytReady && Number.isFinite(details.seekTime)) {
-        player.seekTo(details.seekTime, true);
-        act('seek', { time: details.seekTime });
-      }
-    });
-  } catch (e) {}
-
-  try {
-    navigator.mediaSession.playbackState = state.playing ? 'playing' : 'paused';
-    if (ytReady && player && typeof player.getDuration === 'function') {
-      const duration = player.getDuration();
-      const position = player.getCurrentTime();
-      if (duration > 0 && Number.isFinite(position)) {
-        navigator.mediaSession.setPositionState({
-          duration,
-          playbackRate: 1,
-          position: Math.min(position, duration)
-        });
+  const handlers = {
+    play: async () => {
+      try { await audio.play(); act('play', { time: audio.currentTime || state.time || 0 }); }
+      catch (e) { setStatus('Open SyncPlay and tap Play to resume.'); }
+    },
+    pause: () => { const position = audio.currentTime || 0; audio.pause(); act('pause', { time: position }); },
+    previoustrack: () => act('prev'),
+    nexttrack: () => act('next'),
+    seekto: details => {
+      if (Number.isFinite(details.seekTime) && Number.isFinite(audio.duration)) {
+        audio.currentTime = Math.max(0, Math.min(details.seekTime, audio.duration));
+        act('seek', { time: audio.currentTime });
       }
     }
+  };
+  for (const [name, handler] of Object.entries(handlers)) {
+    try { navigator.mediaSession.setActionHandler(name, handler); } catch (e) {}
+  }
+  try { navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing'; } catch (e) {}
+  updateMediaPosition();
+}
+
+function updateMediaPosition() {
+  if (!('mediaSession' in navigator) || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+  try {
+    navigator.mediaSession.setPositionState({
+      duration: audio.duration,
+      playbackRate: audio.playbackRate || 1,
+      position: Math.min(audio.currentTime || 0, audio.duration)
+    });
   } catch (e) {}
 }
 
-function onPlayerState(e) {
-  if (applying || !state || state.index < 0) return;
-  const t = player.getCurrentTime();
-  if (e.data === YT.PlayerState.PLAYING) {
-    if (!state.playing || Math.abs(t - state.time) > 2) act('play', { time: t });
-  } else if (e.data === YT.PlayerState.PAUSED) {
-    // Browsers may suspend embedded playback when backgrounded.
-    // Do not broadcast that browser lifecycle pause to the whole room.
-    if (document.hidden) return;
-    if (state.playing) act('pause', { time: t });
-  } else if (e.data === YT.PlayerState.ENDED) {
-    act('ended', { i: state.index });
+audio.addEventListener('play', () => { updatePlayButton(); setStatus('Playing'); updateMediaSession(); });
+audio.addEventListener('pause', () => { updatePlayButton(); if (state && !state.playing) setStatus('Paused'); updateMediaSession(); });
+audio.addEventListener('playing', () => { setStatus('Playing'); updatePlayButton(); });
+audio.addEventListener('waiting', () => setStatus('Buffering…'));
+audio.addEventListener('timeupdate', () => {
+  document.getElementById('current-time').textContent = formatTime(audio.currentTime);
+  const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+  document.getElementById('duration').textContent = formatTime(duration);
+  const seek = document.getElementById('seek');
+  seek.max = String(Math.max(1, Math.floor(duration)));
+  if (!seek.matches(':active')) seek.value = String(Math.floor(audio.currentTime || 0));
+  updateMediaPosition();
+});
+audio.addEventListener('loadedmetadata', () => {
+  document.getElementById('duration').textContent = formatTime(audio.duration);
+  updateMediaPosition();
+});
+audio.addEventListener('ended', () => {
+  if (state && state.playing) act('ended', { i: state.index });
+});
+audio.addEventListener('error', () => {
+  if (audio.currentSrc) setStatus('Audio error. The URL may not allow direct streaming.');
+});
+
+document.getElementById('seek').addEventListener('change', event => {
+  const position = Number(event.target.value);
+  if (Number.isFinite(position) && Number.isFinite(audio.duration)) {
+    audio.currentTime = Math.min(position, audio.duration);
+    act('seek', { time: audio.currentTime });
   }
+});
+
+// ---------- Chat ----------
+function sendChat() {
+  const box = document.getElementById('msg');
+  const message = box.value.trim();
+  if (!message || !socket) return;
+  socket.emit('chat', { name: myName, text: message });
+  box.value = '';
 }
 
-// When you come back to the tab, jump to where the room is now.
+function showMsg(message) {
+  if (message.left <= 0 || document.getElementById('m-' + message.id)) return;
+  const box = document.getElementById('chat');
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
+  const div = document.createElement('div');
+  div.className = 'msg' + (message.name === myName ? ' me' : '');
+  div.id = 'm-' + message.id;
+  const who = document.createElement('b');
+  who.textContent = message.name + ': ';
+  div.append(who, document.createTextNode(message.text));
+  box.appendChild(div);
+  updateEmpty();
+  if (atBottom) box.scrollTop = box.scrollHeight;
+  const milliseconds = message.left * 1000;
+  setTimeout(() => div.classList.add('fading'), Math.max(0, milliseconds - 15000));
+  setTimeout(() => { div.remove(); updateEmpty(); }, milliseconds);
+}
+
+function updateEmpty() {
+  document.getElementById('chat-empty').style.display = document.querySelector('#chat .msg') ? 'none' : 'block';
+}
+
+function renderList() {
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  if (!state || !state.playlist.length) {
+    list.innerHTML = '<p class="muted">Playlist is empty. Add a direct audio URL above.</p>';
+    return;
+  }
+  state.playlist.forEach((track, index) => {
+    const item = document.createElement('li');
+    if (index === state.index) item.className = 'cur';
+    const title = document.createElement('span');
+    title.className = 't';
+    title.textContent = (index === state.index ? '♫ ' : '') + (track.title || 'Untitled audio');
+    title.onclick = () => act('play_index', { i: index });
+    const remove = document.createElement('button');
+    remove.textContent = '✕';
+    remove.setAttribute('aria-label', 'Remove ' + (track.title || 'track'));
+    remove.onclick = () => act('remove', { i: index });
+    item.append(title, remove);
+    list.appendChild(item);
+  });
+}
+
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;
   unread = 0;
   document.title = 'SyncPlay';
-  if (ytReady && state) { apply(state); updateMediaSession(); }
+  if (state) {
+    // Reconcile position after returning; do not pause audio on backgrounding.
+    if (audio.paused && state.playing) applyRoomState(state);
+    updateMediaSession();
+  }
 });
 
-function renderList() {
-  const ul = document.getElementById('list');
-  ul.innerHTML = '';
-  state.playlist.forEach((s, i) => {
-    const li = document.createElement('li');
-    if (i === state.index) li.className = 'cur';
-    const t = document.createElement('span');
-    t.className = 't';
-    t.textContent = (i === state.index ? '▶ ' : '') + s.title;
-    t.onclick = () => act('play_index', { i });
-    const x = document.createElement('button');
-    x.textContent = '✕';
-    x.onclick = () => act('remove', { i });
-    li.append(t, x);
-    ul.appendChild(li);
-  });
-  if (!state.playlist.length) ul.innerHTML = '<p class="muted">Playlist is empty. Paste a link above.</p>';
-}
-// ---------- Installable PWA ----------
 window.addEventListener('beforeinstallprompt', event => {
   event.preventDefault();
   deferredInstallPrompt = event;
-  const btn = document.getElementById('install-btn');
-  if (btn) btn.style.display = 'block';
+  document.getElementById('install-btn').style.display = 'block';
 });
-
 window.addEventListener('appinstalled', () => {
   deferredInstallPrompt = null;
-  const btn = document.getElementById('install-btn');
-  if (btn) btn.style.display = 'none';
+  document.getElementById('install-btn').style.display = 'none';
 });
-
 async function installApp() {
   if (deferredInstallPrompt) {
     deferredInstallPrompt.prompt();
@@ -425,18 +458,10 @@ async function installApp() {
     document.getElementById('install-btn').style.display = 'none';
     return;
   }
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  if (isIOS) {
-    alert('To install SyncPlay: tap the Share button in Safari, then choose “Add to Home Screen”.');
-  } else {
-    alert('If your browser supports installation, open its menu and choose “Install app” or “Add to Home screen”.');
-  }
+  alert('In Chrome, open the menu (⋮) and choose Install app or Add to Home screen.');
 }
-
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(err => console.warn('Service worker registration failed:', err));
-  });
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(err => console.warn('Service worker registration failed:', err)));
 }
 </script>
 </body>
