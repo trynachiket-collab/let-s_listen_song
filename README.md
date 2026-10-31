@@ -1,26 +1,53 @@
-# SyncPlay: listen to YouTube together, in sync
+# SyncPlay
 
-## Run it
-```bash
+A small real-time shared listening-room web app built with FastAPI, Socket.IO, and a browser-based YouTube player. This package includes an installable PWA shell and Media Session integration.
+
+## Project structure
+
+```text
+syncplay/
+├── main.py
+├── requirements.txt
+├── Procfile
+├── README.md
+├── .gitignore
+└── static/
+    ├── index.html
+    ├── manifest.json
+    ├── sw.js
+    └── icon.svg
+```
+
+## Run locally (Windows PowerShell)
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install -r requirements.txt
-python app.py            # starts on http://localhost:5000
+python main.py
 ```
 
-## Share it with your friend (ngrok)
-In a second terminal:
+Then open `http://localhost:5000` in your browser. Open a second browser window or device to test joining the same room. For access from a phone on the same Wi-Fi, use your computer's LAN IP and port 5000; service workers/PWA installation generally require HTTPS except on localhost, so use an HTTPS deployment to install it on a phone.
+
+## Deploy
+
+The included `Procfile` is compatible with common Python web-app hosts that support Procfiles. Set the start command to:
+
 ```bash
-ngrok http 5000
+uvicorn main:app --host 0.0.0.0 --port $PORT
 ```
-Send the `https://xxxx.ngrok-free.app` link to your friend. Both of you open it,
-enter the same room code, and paste YouTube links. Either of you can play,
-pause, skip, seek, or pick songs from the shared playlist.
 
-## Notes
-- Click **Create new room** for a random code; your friend uses **Join** with that code.
-- Type a song name to search (uses yt-dlp, no API key) or paste a link.
-- If search stops working, run `pip install -U yt-dlp`.
-- Each person's device plays the audio from YouTube itself; only controls are synced.
-- Playlist is kept in server memory, so it resets when you restart `app.py`.
-- If one of you gets a YouTube ad, you may drift a few seconds. Pressing play or
-  clicking the song again re-syncs everyone.
-- Some videos disable embedding and won't play; try another upload of the song.
+Use an HTTPS domain for PWA installation and service-worker support. Free hosting tiers may sleep when idle and may not be suitable for uninterrupted shared rooms.
+
+## Background playback: important limitation
+
+This project still uses the YouTube IFrame Player API for playback. The PWA manifest and service worker do **not** keep audio alive in the background. The page adds Media Session metadata and media action handlers where supported, but actual background playback depends on the browser, operating system, YouTube embed behavior, and device power settings. It is not guaranteed when switching apps or locking the phone.
+
+For reliable background audio, the next architectural step is to use an audio source that explicitly permits background playback and play it through a persistent HTML `<audio>` element. YouTube search results and embed IDs are not direct audio-stream URLs, and this project does not extract or proxy YouTube audio.
+
+## Prototype notes
+
+- Rooms and chat are held in server memory. Restarting the server clears them.
+- Run a single server process/instance unless you add shared storage and a Socket.IO message queue.
+- The app is a prototype; add authentication, rate limiting, and production security controls before exposing it to a large public audience.
